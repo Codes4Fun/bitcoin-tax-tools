@@ -329,7 +329,7 @@ var fileIndex = 0;
 
 function onDone()
 {
-	var maxTime = 1426807360;//1388563200;//1388534400;
+	var maxTime = 1451606400;//1426807360;//1388563200;//1388534400;
 	var inout = filterTransactions(transactions, maxTime);
 
 	inputFileLink.href = 'data:text/csv;charset=UTF-8,' + encodeURIComponent(CSV.stringify(inout.input));
