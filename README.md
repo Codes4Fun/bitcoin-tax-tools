@@ -1,79 +1,102 @@
 # Open Source Bitcoin Tax Tools
 
-These tools are used to help acquire and generate tax documents for BTC holdings.
+Use these tools to generate a TXF document that can be imported into tax software.
 
+ - currently only supports FIFO.
+ - uses bitstamp exchange rates which can be changed to other exchanges if run locally.
+
+These are not guaranteed to be without risk, or even to give you the lowest tax rate. You should go to a tax professional or [online services](https://en.bitcoin.it/wiki/Tax_compliance#Accounting_and_Tax_Compliance_Software) if you need that, but even if you do that consider using these tools a supplement, not just to double check your taxes but also to double check these tools.
 
 ## privacy
 
-While not necessary, to get the most privacy, it is recommend you run your own insight server node:
+These tools do not ever upload your personal data, and while not necessary to use these tools, to get the most privacy, it is recommend you run your own insight server node:
 
-https://github.com/bitpay/insight-api
+> https://github.com/bitpay/insight-api
 
-From there you will be able to download transaction data privately.
+After you have downloaded all the bitcoin blocks you will be able to download transaction data privately.
 
+And since you created a node you can also help decentralize the network by keeping the node running :)
 
-## installation
+## workflow
 
-You can run it locally using node.js/npm, pull the files from github or download and uncompress them and then from command line:
+1) Gather transactions.
+ - For bitcoin wallets generate download links for wallet transactions (in json) using this [tool](tool.00.insight.html). Here it is useful to have a private insight server but public servers are an option here as well.
+ - For virtual wallets the tools have their own [transaction csv format](#transaction).
+ - Coinbase csv files can be converted with this [tool](tool.00.coinbase.html).
+ - For other virtual wallets you will need to either develop a tool or manually create a [transaction csv format](#transaction) file.
 
-1. npm install -g grunt-cli
-2. npm install
-3. grunt
+2) Generate input.csv and output.csv files with this [tool](tool.01.generateIO.insight.html).
+ - input.csv contains all transactions for acquired BTC.
+ - output.csv contains all transactions of spent BTC.
 
-That will launch a local webserver on port 8000.
+3) For a given year generate TXF and compute gains with this [tool](tool.02.report.html)
+ - taxes.txf a document that can be imported into tax software.
+ - taxes.txt a document showing your years income, cost, and gains.
+ - taxes.csv alternative format of TXF.
 
+4) Import TXF file into your tax software.
+ - TurboTax Online does not support TXF files, what you want it TurboTax Premier as it supports investments and will generate the necessary form from the TXF.
 
-## usage
-
-The workflow for using these tools consists of:
-
-1) Gather and convert the necessary data. You might have to create your own transaction csv files for your virtual wallets.
-
-tool.00.coinbase.html - conversion tool from coinbase csv files to a processed transaction csv.
-
-tool.00.insight.html - generates links to download json transaction data of bitcoin addresses from insight API based servers.
-
-2) generate input and output csv files. The input.csv shows acquired bitcoins, and output.csv spent bitcoins.
-
-tool.01.generateIO.insight.html - takes transaction csv files and insight API json files and produces BTC input/output csv files.
-
-3) finally you use input.csv and output.csv to generate tax files for the year.
-
-tool.02.report.html - generates tax reports, TXF and a txt file with income/cost/gains information.
-
-
-## CSV transaction format
+## <a name="transaction"></a>transaction CSV format
 
 You will need to create this for virtual wallets where you don't have a real bitcoin address.
+
+There is a [tool](tool.00.coinbase.html) for automated conversion of coinbase csv files to this format.
+
+If there are other data formats you think should be automated make it an [issue](https://github.com/Codes4Fun/bitcoin-tax-tools/issues)! Or write code and submit a patch!
 
 These files have no headers but each column consists of:
 
 "timestamp", "BTC delta", "exchange rate", "transaction id", "source"
 
+(Note the necessity of quotes around each column value)
+
 where:
- - timestamp - is POSIX time, seconds passed since January 1, 1970.
+ - timestamp - is Unix time, seconds passed since January 1, 1970 UTC.
  - BTC delta - this is how much was gained or lost in BTC in the transaction.
  - exchange rate - this was the exchange rate at the time of exchange. If you sold 2 BTC for 400, this should be 200 (400/2).
  - transaction id - this is the bitcoin transaction id, knowing this allows wallet to wallet transactions to not be counted as a sale/buy.
  - source - this is just for debugging purposes, it lets you know where this transaction came from (a coinbase csv or a bitcoin address, etc).
 
+## exchange rate data
 
-## Bitcoin exchange rate data
+The current exchange rates come from bitstamp and cover from 2013 to 2015.
 
-This is bitstamp exchange rates from 2013 to 2015 and is generated using the tool gendata.
+The rate binaries are generated using a natively built tool in the [gendata](https://github.com/Codes4Fun/bitcoin-tax-tools/tree/gh-pages/gendata) directory.
 
+You can use that tool to create rates for other exchanges, the tool has a readme!
 
-## Some History
+To use your own built rates you then need to run it locally and replace the rate files with your own.
 
-In 2014 I created my initial tools in python, but not wanting to take a risk of messing something up I payed an online site to do my initial txf documents.
+## run it locally!
+
+You can run it locally using node.js/npm, pull the files from github or download and uncompress them and then from command line:
+
+```
+npm install -g grunt-cli
+npm install
+grunt
+```
+
+That will launch a local webserver on port 8000.
+
+Edit Gruntfile.js to change the port.
+
+## some history
+
+ - In 2014 I created my initial tools in python, but not wanting to take a risk of messing something up I payed an online site to do my initial txf documents.
 Their tax reports showed I had higher gains so I used their results instead of my own out of fear of underpaying, but later when I looked at the document they produced it made no sense, some values made much higher then they were supposed to and others made much lower, it almost seemed intentionally obfuscated.
 
-In 2015 I ported my tools to javascript and in so doing found a small bug in my python code, as well as found that python had precision issues. But the code was a messy mashup.
+ - In 2015 I ported my tools to javascript and in so doing found a small bug in my python code, as well as found that python had precision issues. But the code was a messy mashup.
 
-Now I have simplified and reviewed the code and am releasing it for others to review and use.
+ - Now (2016) I have simplified and reviewed the code more and releasing it for others to review and use.
 
-## Tip Me!
+## links
 
-[17Mqj42oV1xtMWt16MBPyveZZXKUaJFH1H]
+source code : https://github.com/Codes4Fun/bitcoin-tax-tools
 
-[17Mqj42oV1xtMWt16MBPyveZZXKUaJFH1H]:https://blockchain.info/address/17Mqj42oV1xtMWt16MBPyveZZXKUaJFH1H
+report bugs, feature requests, etc : https://github.com/Codes4Fun/bitcoin-tax-tools/issues
+
+create bitcoin bounties on those features or bug fixes : https://www.bountysource.com/
+
+tip me? [17Mqj42oV1xtMWt16MBPyveZZXKUaJFH1H](https://blockchain.info/address/17Mqj42oV1xtMWt16MBPyveZZXKUaJFH1H)

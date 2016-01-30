@@ -1,51 +1,21 @@
-<html>
-<head><title>Open Source Bitcoin Tax Tools</title></head>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<title>README.md</title>
+	<link rel="stylesheet" type="text/css" href="markdown.css">
+</head>
 <body>
-<div>
-These tools are to help you do your bitcoin taxes.<br>
-<br>
-They are not guaranteed to be without risk, or to give you the biggest discount. You should go to a tax professional if you need that, but even if you do that consider using these tools a supplement, not just to double check your taxes but also to double check these tools.<br>
-<br>
-<a href="https://github.com/Codes4Fun/bitcoin-tax-tools">source code.</a><br>
-<a href="https://github.com/Codes4Fun/bitcoin-tax-tools/issues">report bugs, feature requests, etc</a><br>
-<br>
-They currently only do FIFO.<br>
-They use bitstamp exchange rates where rates are missing. This can be customized if you download and build gendata and replace bitcoin.*.rate files.<br>
-<br>
-</div>
-<div>1) Gather transactions:</div>
-<div style="padding-left:1em">
-For bitcoin wallets <a href="tool.00.insight.html">generate download links for transaction data (in json).</a><br>
-To get the most privacy create your own <a href="https://github.com/bitpay/insight-api">insight API based bitcoin node</a>, so you can download them locally.<br>
-<br>
-For virtual wallets we use a transaction csv format.<br>
-<br>
-<a href="tool.00.coinbase.html">This tool converts coinbase csv files to a transaction csv file</a>.<br>
-<br>
-For other virtual wallets create CSV files with your favorite spreadsheet editor (<a href="https://www.openoffice.org/product/calc.html">calc</a> or excel) or a text editor, formatted with each transaction like this (quotes around each column):<br>
-"timestamp", "BTC delta", "exchange rate", "transaction id", "source"<br>
-<br>
-where:<br>
-<b>timestamp</b> - is POSIX time, seconds passed since January 1, 1970.<br>
-<b>BTC delta</b> - this is how much was gained or lost in BTC in the transaction.<br>
-<b>exchange rate</b> - this was the exchange rate at the time of exchange. If you sold 2 BTC for 400, this should be 200 (400/2). If you don't know the exchange rate it will be generated later.<br>
-<b>transaction id</b> - this is the bitcoin transaction id, knowing this allows wallet to wallet transactions to not be counted as a sale/buy.<br>
-<b>source</b> - this is just for debugging purposes, it lets you know where this transaction came from (a coinbase csv or a bitcoin address, etc).<br>
-</div>
-<br>
-2) <a href="tool.01.generateIO.insight.html">Generate input and output csv data from transaction csv/json files</a><br>
-<div style="padding-left:1em">
-input.csv and output.csv contain transactions across all wallets.<br>
-input.csv contains all transactions for acquired BTC.<br>
-output.csv contains all transactions of spent BTC.<br>
-</div>
-<br>
-3) <a href="tool.02.report.html">Generate TXF and compute gains for a year</a><br>
-<div style="padding-left:1em">
-taxes.csv alternative format of TXF.<br>
-taxes.txf a document that can be imported into tax software.<br>
-taxes.txt a document showing your years income, cost, and gains.<br>
-</div>
+	<div id="results"></div>
+	<script src="js/marked.min.js"></script>
+	<script>
+		var req = new XMLHttpRequest();
+		req.open('GET', 'README.md', true);
+		req.onload = function ()
+		{
+			var ret = marked(req.responseText);
+			document.getElementById('results').innerHTML=ret;
+		}
+		req.send();
+	</script>
 </body>
 </html>
-
