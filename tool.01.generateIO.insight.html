@@ -1,0 +1,413 @@
+<html>
+<body>
+
+<script src="js/csv.js"></script>
+<script src="js/getrate.js"></script>
+
+<script src="js/modules.js"></script>
+<script>
+var bitcoin = modules.bitcoin;
+//var Buffer = modules.buffer.Buffer;
+//var Bip38 = modules.bip38;
+//var bip38 = new Bip38()
+</script>
+
+<button onclick="addFiles()">Add Files</button>
+<button id="generateButton" disabled onclick="generate()">Generate</button>
+<a id="inputFileLink"></a>
+<a id="outputFileLink"></a>
+<br>
+
+<table>
+<tbody>
+<tr><td>Files</td><td></td></tr>
+</tbody>
+</table>
+<script>
+var tbody = document.querySelector('tbody');
+var generateButton = document.getElementById('generateButton');
+var inputFileLink = document.getElementById('inputFileLink');
+var outputFileLink = document.getElementById('outputFileLink');
+
+
+function getFileExtension(filename)
+{
+	var index = filename.lastIndexOf('.');
+	if (index != -1)
+	{
+		return filename.slice(index+1);
+	}
+	return '';
+}
+
+function getFileBaseName(filename)
+{
+	var extIndex = filename.lastIndexOf('.');
+	if (extIndex == -1)
+	{
+		extIndex = filename.length;
+	}
+	var pathIndex = filename.lastIndexOf('/');
+	return filename.slice(pathIndex+1, extIndex);
+}
+
+function isAddress(string) {
+	try {
+		bitcoin.address.fromBase58Check(string)
+	} catch (e) {
+		return false
+	}
+
+	return true
+}
+
+
+var inputs = [];
+
+function filesSelected()
+{
+	if (this.files.length == 0)
+	{
+		return;
+	}
+	for (var i = 0; i < this.files.length; i++)
+	{
+		var extension = getFileExtension(this.files[i].name);
+		if (extension != 'csv' && extension != 'json')
+		{
+			alert('expecting csv or json file but got: ' + this.files[i].name);
+			return;
+		}
+		if (extension == 'json')
+		{
+			var baseName = getFileBaseName(this.files[i].name);
+			if (!isAddress(baseName))
+			{
+				alert('expected json file with bitcoin address as filename but got: ' + this.files[i].name);
+				return;
+			}
+		}
+	}
+	var input = this;
+	inputs.push(input);
+	var tr = document.createElement('tr');
+	var td = document.createElement('td');
+	td.insertAdjacentHTML('beforeend', input.files[0].name);
+	for (var i = 1; i < input.files.length; i++)
+	{
+		td.insertAdjacentHTML('beforeend', '<br>' + input.files[i].name);
+	}
+	tr.appendChild(td);
+	var td = document.createElement('td');
+	var button = document.createElement('button');
+	button.onclick = function ()
+	{
+		var index = inputs.indexOf(input);
+		inputs.splice(index, 1);
+		tbody.removeChild(tr);
+		if (inputs.length == 0)
+		{
+			generateButton.disabled = true;
+		}
+	}
+	td.appendChild(button);
+	tr.appendChild(td);
+	button.textContent = 'Remove';
+	tbody.appendChild(tr);
+	if (ratesLoaded)
+	{
+		generateButton.disabled = false;
+	}
+}
+
+function addFiles()
+{
+	var input = document.createElement('input');
+	input.type = 'file';
+	input.multiple = true;
+	input.onchange = filesSelected;
+	input.click();
+}
+
+
+
+var transactionTable = {}
+var transactions = []
+
+function resetTransactions()
+{
+	transactionTable = {}
+	transactions = []
+}
+
+function integrateTransaction(time, balance, rate, id, source)
+{
+	var transaction;
+	if (id.length > 0)
+	{
+		if (transactionTable[id] != undefined)
+		{
+			transaction = transactionTable[id];
+			transaction[1] += balance;
+			if (transaction[2].length == 0)
+			{
+				transaction[2] = rate;
+			}
+			transaction[4] += ' ' + source;
+		}
+		else
+		{
+			transaction = [ time, balance, rate, id, source ];
+			transactionTable[id] = transaction;
+			transactions.push(transaction);
+		}
+	}
+	else
+	{
+		transaction = [ time, balance, rate, id, source ];
+		transactions.push(transaction);
+	}
+}
+
+function integrateCSV(csv)
+{
+	for (var i = 0; i < csv.length; i++)
+	{
+		var tx = csv[i];
+		integrateTransaction(tx[0], parseFloat(tx[1]), tx[2], tx[3], tx[4]);
+	}
+}
+
+function integrateJSON(wallet, address)
+{
+	for (var t = 0; t < wallet.txs.length; t++)
+	{
+		var tx = wallet.txs[t];
+		var balance = 0;
+		for (var ti = 0; ti < tx.vin.length; ++ti)
+		{
+			if (tx.vin[ti].addr != address)
+			{
+				continue;
+			}
+			balance -= parseFloat(tx.vin[ti].value);
+		}
+		for (var to = 0; to < tx.vout.length; ++to)
+		{
+			var scriptAddresses = tx.vout[to].scriptPubKey.addresses;
+			var sa = 0;
+			for (; sa < scriptAddresses.length; sa++)
+			{
+				if (scriptAddresses[sa] == address)
+				{
+					break;
+				}
+			}
+			if (sa == scriptAddresses.length)
+			{
+				continue;
+			}
+			balance += parseFloat(tx.vout[to].value);
+		}
+		integrateTransaction(tx.blocktime.toString(), balance, '', tx.txid, address);
+	}
+}
+
+// sometimes math operations result in fractional satoshis as a precision issue.
+function fixBTC(btc)
+{
+	return Math.round(btc*100000000)/100000000;
+}
+
+// accumulate rates by year
+function addRateTs(pendingRates, index, ts)
+{
+	var year = new Date(ts*1000).getFullYear();
+	if (pendingRates[year] === undefined)
+	{
+		pendingRates[year] = {
+			index : [],
+			ts : []
+		}
+	}
+	pendingRates[year].index.push(index);
+	pendingRates[year].ts.push(ts);
+}
+
+var ratesLoaded = false;
+var rates = new Rates([2013, 2014, 2015],
+function ()
+{
+	ratesLoaded = true;
+	if (inputs.length > 0)
+	{
+		generateButton.disabled = false;
+	}
+	console.log('rates loaded!');
+},
+function (message)
+{
+	console.log('loading rates failed :' + message);
+});
+
+function filterTransactions(pre_transactions, maxTime)
+{
+	var transactions = [];
+	var input = [];
+	var output = [];
+	var pendingRates = {};
+	for (var i = 0; i < pre_transactions.length; i++)
+	{
+		var tx = pre_transactions[i];
+		
+		var time = parseInt(tx[0]);
+		if (time >= maxTime)
+		{
+			continue;
+		}
+
+		var btc = fixBTC(tx[1]);
+		if (btc == 0)
+		{
+			continue;
+		}
+		if (btc > 0)
+		{
+			input.push(tx);
+		}
+		else
+		{
+			output.push(tx);
+		}
+		tx[1] = btc.toString();
+
+		if (tx[2].length == 0)
+		{
+			addRateTs(pendingRates, transactions.length, time);
+		}
+		transactions.push(tx);
+	}
+
+	var rateYears = Object.keys(pendingRates);
+	if (rateYears.length > 0)
+	{
+		for (var year in pendingRates)
+		{
+			console.log(year);
+			var rateTs = pendingRates[year].ts;
+			var rateIndex = pendingRates[year].index;
+			var rateUSD = rates.getRates(year, rateTs);
+			if (rateUSD.length != rateIndex.length)
+			{
+				alert('failed to get rates!');
+				return;
+			}
+			for (var i = 0; i < rateIndex.length; i++)
+			{
+				transactions[rateIndex[i]][2] = rateUSD[i];
+			}
+		}
+	}
+
+	input.sort(function(a,b) { return parseInt(a[0]) - parseInt(b[0]) } );
+	output.sort(function(a,b) { return parseInt(a[0]) - parseInt(b[0]) } );
+
+	return {
+		input : input,
+		output : output,
+		transactions : transactions
+	};
+}
+
+
+
+
+
+var files = [];
+var fileName = '';
+var fileIndex = 0;
+
+function onDone()
+{
+	var maxTime = 1426807360;//1388563200;//1388534400;
+	var inout = filterTransactions(transactions, maxTime);
+
+	inputFileLink.href = 'data:text/csv;charset=UTF-8,' + encodeURIComponent(CSV.stringify(inout.input));
+	inputFileLink.download = 'input.csv'
+	inputFileLink.textContent = 'input.csv'
+
+	outputFileLink.href = 'data:text/csv;charset=UTF-8,' + encodeURIComponent(CSV.stringify(inout.output));
+	outputFileLink.download = 'output.csv'
+	outputFileLink.textContent = 'output.csv'
+}
+
+function readerOnLoad(e)
+{
+	var extension = getFileExtension(fileName);
+	if (extension == 'csv')
+	{
+		var csv = CSV.parse(this.result);
+		integrateCSV(csv);
+	}
+	else
+	{
+		var json = JSON.parse(this.result);
+		integrateJSON(json, getFileBaseName(fileName));
+	}
+	readNext();
+}
+
+function readNext()
+{
+	if (fileIndex >= files.length)
+	{
+		onDone();
+		return;
+	}
+	var reader = new FileReader();
+	reader.onload = readerOnLoad;
+	reader.readAsText(files[fileIndex]);
+	fileName = files[fileIndex].name;
+	fileIndex++;
+}
+
+function generate()
+{
+	resetTransactions();
+
+	files = [];
+	// gather csv files first
+	for (var i = 0; i < inputs.length; i++)
+	{
+		var input = inputs[i];
+		for (var j = 0; j < input.files.length; j++)
+		{
+			if (getFileExtension(input.files[j].name) != 'csv')
+			{
+				continue;
+			}
+			files.push(input.files[j]);
+		}
+	}
+	// gather json files next
+	for (var i = 0; i < inputs.length; i++)
+	{
+		var input = inputs[i];
+		for (var j = 0; j < input.files.length; j++)
+		{
+			if (getFileExtension(input.files[j].name) != 'json')
+			{
+				continue;
+			}
+			files.push(input.files[j]);
+		}
+	}
+
+	// start reading  files
+	fileIndex = 0;
+	readNext();
+}
+</script>
+
+</body>
+</html>

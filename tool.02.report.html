@@ -1,0 +1,297 @@
+<html>
+
+
+<body>
+
+<script src="js/csv.js"></script>
+
+year: <input id="inputYear" type="text"><br>
+
+input.csv : <input type="file" onchange="inputFileSelected(this.files)"><br>
+output.csv : <input type="file" onchange="outputFileSelected(this.files)"><br>
+
+<button id="generateButton" onclick="generate()" disabled>Generate</button><br>
+<a id="taxesCSVLink"></a><br>
+<a id="taxesTXFLink"></a><br>
+<a id="taxesTXTLink"></a><br>
+<div id="incomeText"></div>
+
+<script>
+
+var inputYear = document.getElementById('inputYear');
+var taxesCSVLink = document.getElementById('taxesCSVLink');
+var taxesTXFLink = document.getElementById('taxesTXFLink');
+var taxesTXTLink = document.getElementById('taxesTXTLink');
+var incomeText = document.getElementById('incomeText');
+
+inputYear.value = new Date().getFullYear()-1;
+
+var inputCSVFile = null;
+var outputCSVFile = null;
+
+function inputFileSelected(files)
+{
+	if (files.length != 1)
+	{
+		inputCSVFile = null;
+		generateButton.disabled = true;
+	}
+	inputCSVFile = files[0];
+	if (outputCSVFile)
+	{
+		generateButton.disabled = false;
+	}
+}
+
+function outputFileSelected(files)
+{
+	if (files.length != 1)
+	{
+		outputCSVFile = null;
+		generateButton.disabled = true;
+	}
+	outputCSVFile = files[0];
+	if (outputCSVFile)
+	{
+		generateButton.disabled = false;
+	}
+}
+
+
+var inputCSV = null;
+var outputCSV = null;
+
+function fixUSD(usd)
+{
+	return Math.round(usd*100)/100;
+}
+
+function generate()
+{
+	var year = parseInt(inputYear.value);
+	if (isNaN(year))
+	{
+		alert('year is not a year');
+		return;
+	}
+
+	var reader = new FileReader();
+	reader.onload = function ()
+	{
+		inputCSV = CSV.parse(this.result);
+		var reader = new FileReader();
+		reader.onload = function ()
+		{
+			outputCSV = CSV.parse(this.result);
+			//
+			var tsStart = (new Date(year + '-01-01')).getTime() / 1000;
+			var tsEnd = (new Date((year + 1) + '-01-01')).getTime() / 1000;
+
+			var taxes = generateTaxes(inputCSV, outputCSV, tsStart, tsEnd);
+
+			taxesCSVLink.href = 'data:text/csv;charset=UTF-8,' + encodeURIComponent(CSV.stringify(taxes.taxes));
+			taxesCSVLink.download = 'taxes.csv'
+			taxesCSVLink.textContent = 'taxes.csv'
+
+			taxesTXFLink.href = 'data:text/txf;charset=UTF-8,' + encodeURIComponent(taxes.txf);
+			taxesTXFLink.download = 'taxes.txf'
+			taxesTXFLink.textContent = 'taxes.txf'
+
+			taxesTXTLink.href = 'data:text/txt;charset=UTF-8,' + encodeURIComponent('Top Line: ' + taxes.topLine + '\r\nCost: ' + taxes.cost + '\r\nBottom Line (gains): ' + taxes.bottomLine);
+			taxesTXTLink.download = 'taxes.txt'
+			taxesTXTLink.textContent = 'taxes.txt'
+
+			incomeText.innerHTML = 'Top Line: ' + taxes.topLine + '<br>Cost: ' + taxes.cost + '<br>Bottom Line (gains): ' + taxes.bottomLine;
+		}
+		reader.readAsText(outputCSVFile);
+	}
+	reader.readAsText(inputCSVFile);
+}
+
+// gets transactions for btc range, used for getting rates of those btc.
+// input - is a list of input transactions
+// start - is the first btc
+// end - is the last btc
+function getBTC(input, start, end)
+{
+	//console.log('getBTC ' + start + ' ' + end);
+	var btc = 0;
+	// find start
+	var sbtc = 0;
+	var si;
+	for (si = 0; si < input.length; si++)
+	{
+		var txbtc = parseFloat(input[si][1]);
+		if (btc + txbtc > start)
+		{
+			sbtc = start - btc;
+			break;
+		}
+		btc += txbtc;
+	}
+	// find end
+	var ebtc = 0;
+	var ei;
+	for (ei = si; ei < input.length; ei++)
+	{
+		var txbtc = parseFloat(input[ei][1]);
+		if (btc + txbtc > end)
+		{
+			ebtc = end - btc;
+			//console.log('   ' + ei + ' ' + ebtc);
+			break;
+		}
+		btc += txbtc;
+		//console.log('   ' + ei + ' ' + btc);
+	}
+
+	//console.log('   ' + ei + ' ' + ebtc + ' , ' + si + ' ' + sbtc);
+
+	if (ei == si)
+	{
+		return [[input[si][0], end - start, input[si][2], input[si][3], input[si][4]]];
+	}
+
+	var tx = [];
+
+	tx.push([input[si][0], parseFloat(input[si][1]) - sbtc, input[si][2], input[si][3], input[si][4]]);
+
+	for (var i = si+1; i < ei; i++)
+	{
+		tx.push([input[i][0], parseFloat(input[i][1]), input[i][2], input[i][3], input[i][4]]);
+	}
+
+	tx.push([input[ei][0], ebtc, input[ei][2], input[si][3], input[ei][4]]);
+	return tx;
+}
+
+// round to cent.
+function r2f(v) { return (Math.round(v*100)/100).toFixed(2); }
+
+// format a date for TXF files
+function txfDate(d)
+{
+	d = d.toISOString().split('T')[0].split('-');
+	return d[1] + '/' + d[2] + '/' + d[0];
+}
+
+function generateTaxes(input, output, tsStart, tsEnd)
+{
+	var taxes = [['description','code','date acquired', 'date sold', 'sales price', 'cost', 'adjustment', 'gain']];
+	var txf = 'V042\r\nABitcoinTaxes\r\nD' + txfDate(new Date()) + '\r\n^\r\n';
+	var totalPrice = 0;
+	var totalCost = 0;
+	var totalGain = 0;
+	var btc = 0;
+
+	for (var i = 0; i < output.length; i++)
+	{
+		var obtc = -parseFloat(output[i][1]);
+		var btcStart = btc;
+		btc += obtc;
+
+		var tsSold = parseInt(output[i][0]);
+		if (tsSold < tsStart || tsSold >= tsEnd)
+		{
+			continue;
+		}
+
+		var tx = getBTC(input, btcStart, btcStart + obtc);
+		for (var j = 0; j < tx.length; j++)
+		{
+			var price = r2f(tx[j][1] * output[i][2]);
+			var cost = r2f(tx[j][1] * tx[j][2]);
+			var gain = r2f(price - cost);
+			var tsAcquired = parseInt(tx[j][0]);
+			var dateAcquired = new Date(tsAcquired * 1000);
+			var dateSold = new Date(tsSold * 1000);
+			var date1 = txfDate(dateAcquired);
+			var date2 = txfDate(dateSold);
+			taxes.push([tx[j][1].toFixed(8) + ' BTC', '', date1, date2, price, cost, '', gain]);
+			totalPrice += parseFloat(price);
+			totalCost += parseFloat(cost);
+			totalGain += parseFloat(gain);
+
+			// separate ISO string to [year, month, date and time zone]
+			var yymmdd = dateAcquired.toISOString().split('-');
+			// add a year
+			yymmdd[0] = parseInt(yymmdd[0]) + 1;
+			// recombine the ISO string, get the timestamp, and add a day.
+			var tsYear = (new Date(yymmdd.join('-'))).getTime()/1000 + 24*60*60;
+
+			txf += 'TD\r\n';
+			if (tsSold > tsYear)
+			{
+				txf += 'N714\r\n';
+			}
+			else
+			{
+				txf += 'N712\r\n';
+			}
+			txf += 'C1\r\n';
+			txf += 'L1\r\n';
+			txf += 'P' + tx[j][1].toFixed(8) + ' BTC\r\n';
+			txf += 'D' + date1 + '\r\n';
+			txf += 'D' + date2 + '\r\n';
+			txf += '$' + cost +'\r\n';
+			txf += '$' + price + '\r\n';
+			txf += '^\r\n';
+		}
+	}
+	console.log(totalPrice);
+	console.log(totalCost);
+	console.log(totalGain);
+	return {
+		taxes : taxes,
+		txf : txf,
+		topLine : fixUSD(totalPrice),
+		cost : fixUSD(totalCost),
+		bottomLine : fixUSD(totalGain),
+	}
+}
+
+/*
+function doTasks()
+{
+	var input;
+	if (fileCheck('input.csv'))
+	{
+		input = getCSV('input.csv')
+		document.body.insertAdjacentHTML('beforeend', 'loaded input.csv<br>');
+	}
+	else
+	{
+		alert('unable to load input.csv');
+		return;
+	}
+
+	var output;
+	if (fileCheck('output.csv'))
+	{
+		output = getCSV('output.csv')
+		document.body.insertAdjacentHTML('beforeend', 'loaded output.csv<br>');
+	}
+	else
+	{
+		alert('unable to load output.csv');
+		return;
+	}
+
+	var tsStart = (new Date('2014-01-01')).getTime() / 1000;
+	var tsEnd = (new Date('2015-01-01')).getTime() / 1000;
+
+	var taxes = generateTaxes(input, output, tsStart, tsEnd);
+
+	saveCSV('taxes.csv', taxes.taxes);
+	document.body.insertAdjacentHTML('afterbegin', '<a href="csv.html#taxes.csv">taxes.csv</a><br>');
+
+	saveToFile('taxes.txf', taxes.txf);
+	document.body.insertAdjacentHTML('afterbegin', '<a href="txf.html#taxes.txf">taxes.txf</a><br>');
+}
+*/
+
+
+</script>
+
+</body>
+</html>

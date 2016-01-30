@@ -1,0 +1,22 @@
+<html>
+<head><title>Open Source Bitcoin Tax Tools</title></head>
+<body>
+<div>1) Gather transaction data:</div>
+<div style="padding-left:1em">
+<a href="tool.00.coinbase.html">Coinbase csv file conversion</a><br>
+<a href="tool.00.insight.html">Generate download links for transaction data</a><br>
+For other virtual wallets create CSV files, formatted with each transaction like this:<br>
+"timestamp", "BTC delta", "exchange rate", "transaction id", "source"<br>
+<br>
+where:<br>
+timestamp - is POSIX time, seconds passed since January 1, 1970.<br>
+BTC delta - this is how much was gained or lost in BTC in the transaction.<br>
+exchange rate - this was the exchange rate at the time of exchange. If you sold 2 BTC for 400, this should be 200 (400/2). If you don't know the exchange rate it will be generated later.<br>
+transaction id - this is the bitcoin transaction id, knowing this allows wallet to wallet transactions to not be counted as a sale/buy.<br>
+source - this is just for debugging purposes, it lets you know where this transaction came from (a coinbase csv or a bitcoin address, etc).<br>
+</div>
+<a href="tool.01.generateIO.insight.html">2) Generate input and output csv data from transaction csv/json files</a><br>
+<a href="tool.02.report.html">3) Generate TXF and compute gains for a year</a><br>
+</body>
+</html>
+

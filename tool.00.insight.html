@@ -1,0 +1,323 @@
+<html>
+<body>
+
+<script src="js/csv.js"></script>
+
+<style>
+td {
+	padding-left:8px;
+}
+.centered {
+	position:absolute;
+	left:50%;
+	top:50%;
+	transform:translate(-50%,-50%);
+}
+.backdrop {
+	position:absolute;
+	left:0px;
+	top:0px;
+	width:100%;
+	height:100%;
+	display:none;
+	background-color:rgba(0,0,0,0.5);
+}
+.dialog {
+	border-radius:5px;
+	background-color:white;
+	padding:8px;
+}
+</style>
+
+<div id="addAddressDialog" class="backdrop">
+<div class="centered dialog">
+<div style="margin-bottom:9px">Add Bitcoin Public Address</div>
+<table style="margin-bottom:9px"><tbody>
+<tr><td>Name</td><td><input type="text" style="width:23em" id="name"></td></tr>
+<tr><td>Address</td><td><input type="text" style="width:23em" id="address"></td></tr>
+</tbody></table>
+<div>
+<button style="float:right" onclick="cancelAddAddress()">Cancel</button>
+<button style="float:right; margin-right:9px;" onclick="doneAddAddress()">Okay</button></div>
+</div>
+</div>
+
+This tool generates links to download transactions for addresses.<br>
+Choose Website: <br>
+<form id="sourceSelect">
+</form>
+<br>
+<br>
+<button onclick="queryAddressFile()">Load...</button>
+<button id="saveButton" disabled onclick="saveAddressFile()">Save</button>
+<button onclick="queryAddAddress()">Add Address...</button>
+<button id="generateAllButton" disabled onclick="generateAll()">Generate All</button>
+<br>
+
+<table>
+<tbody id="addressTable">
+<tr><td>Name</td><td>Address</td><td>Actions</td><td>Link</td></tr>
+</tbody>
+</table>
+<script>
+
+var tbody = document.getElementById('addressTable');
+var addAddressDialog = document.getElementById('addAddressDialog');
+var addAddressName = addAddressDialog.querySelector('#name');
+var addAddressAddress = addAddressDialog.querySelector('#address');
+var saveButton = document.getElementById('saveButton');
+var generateAllButton = document.getElementById('generateAllButton');
+var link = document.querySelector('a');
+
+
+var addresses = []
+
+function wget(theUrl)
+{
+	var xmlHttp = new XMLHttpRequest();
+	xmlHttp.open( "GET", theUrl, false );
+	xmlHttp.send();
+	return xmlHttp;
+}
+
+/*function getBlockChain(btaddr)
+{
+	var addr = 'https://blockchain.info/address/' + btaddr + '?cors=true&format=json';
+	result = wget(addr);
+	if (result.status != 200)
+	{
+		console.log('failed to load (' + result.status + '): ' + addr);
+		return undefined;
+	}
+	console.log('loaded : ' + addr);
+	var js = JSON.parse(result.responseText);
+	while (js.txs.length < js.n_tx)
+	{
+		result = wget(addr + '&offset=' + js.txs.length);
+		if (result.status != 200)
+		{
+			console.log('failed to load (' + result.status + '): ' + addr + '&offset=' + js.txs.length);
+			return undefined;
+		}
+		console.log('loaded : ' + addr + '&offset=' + js.txs.length);
+		var js2 = JSON.parse(result.responseText);
+		js.txs = js.txs.concat(js2.txs);
+	}
+	return js;
+}
+
+function getBlockExplorer(btaddr)
+{
+	var addr = 'https://blockexplorer.com/api/txs/?address=' + btaddr;
+	var addr = 'https://insight.bitpay.com/api/txs/?address=' + btaddr;
+	//https://localbitcoinschain.com/api/txs/?address=
+	//https://search.bitaccess.ca/api/txs/?address=
+	result = wget(addr);
+	if (result.status != 200)
+	{
+		console.log('failed to load (' + result.status + '): ' + addr);
+		return undefined;
+	}
+	console.log('loaded : ' + addr);
+	var js = JSON.parse(result.responseText);
+	return js;
+}*/
+
+var insightSites = [
+	'blockexplorer.com',
+	'insight.bitpay.com',
+	'localbitcoinschain.com',
+	'search.bitaccess.ca',
+];
+
+var sourceSelect = document.getElementById('sourceSelect');
+sourceSelect.insertAdjacentHTML('beforeend', '<input type="radio" name="source" value="random" checked>random<br>');
+for (var i = 0; i < insightSites.length; i++)
+{
+	var site = insightSites[i];
+	sourceSelect.insertAdjacentHTML('beforeend', '<input type="radio" name="source" value="' + site + '">' + site + '<br>');
+}
+sourceSelect.insertAdjacentHTML('beforeend', '<input type="radio" name="source" value="custom">another insight api website: <input type="text" id="insightURL">');
+
+function generateLink(address)
+{
+	var value = document.getElementById('sourceSelect').elements['source'].value
+	address.link = 'https://';
+	switch (value)
+	{
+	case 'random':
+		address.link += insightSites[Math.trunc(Math.random()*insightSites.length)];
+		break;
+	case 'custom':
+		address.link += document.getElementById('insightURL').value;
+		break;
+	default:
+		address.link += value;
+	}
+	address.link += '/api/txs/?address=' + address.address;
+}
+
+function getAddressLink(address)
+{
+	return address.link? '<a href="' + address.link + '" download="' + address.address + '.json">' + address.link + '</a>' : '';
+}
+
+
+function trGetCol(tr, index)
+{
+	while (index >= tr.children.length)
+	{
+		var td = document.createElement('td');
+		tr.appendChild(td);
+	}
+	return tr.children[index];
+}
+
+function trCreateCol(tr, textContent)
+{
+	var td = document.createElement('td');
+	td.textContent = textContent;
+	tr.appendChild(td);
+}
+
+function trCreateActionButtons(tr, address)
+{
+	var td = trGetCol(tr, 2);
+	
+	var button = document.createElement('button');
+	button.textContent = 'Remove';
+	button.onclick = function ()
+	{
+		if (confirm('are you sure you want to remove ' + address.name))
+		{
+			tbody.removeChild(tr);
+			var index = addresses.indexOf(address);
+			addresses.splice(index, 1);
+			if (addresses.length == 0)
+			{
+				saveButton.disabled = true;
+				generateAllButton.disabled = true;
+			}
+		}
+	}
+	td.appendChild(button);
+
+	var button = document.createElement('button');
+	button.textContent = 'Generate';
+	button.onclick = function ()
+	{
+		generateLink(address);
+		trGetCol(tr, 3).innerHTML = getAddressLink(address);
+	}
+	td.appendChild(button);
+}
+
+function bindAddressToTable(address)
+{
+	var tr = document.createElement('tr');
+	trGetCol(tr, 0).textContent = address.name;
+	trGetCol(tr, 1).textContent = address.address;
+	trCreateActionButtons(tr, address);
+	trGetCol(tr, 3).innerHTML = getAddressLink(address);
+	tbody.appendChild(tr);
+}
+
+//
+// Load
+//
+
+function loadedAddressFile()
+{
+	addresses = JSON.parse(this.result);
+	while (tbody.children.length > 1)
+	{
+		tbody.removeChild(tbody.lastElementChild);
+	}
+	for (var i = 0; i < addresses.length; i++)
+	{
+		bindAddressToTable(addresses[i]);
+	}
+	saveButton.disabled = false;
+	generateAllButton.disabled = false;
+}
+
+function loadAddressFile()
+{
+	var reader = new FileReader();
+	reader.onload = loadedAddressFile;
+	reader.readAsText(this.files[0]);
+}
+
+var inputLoad = document.createElement('input');
+inputLoad.type = 'file';
+inputLoad.onchange = loadAddressFile;
+
+function queryAddressFile()
+{
+	inputLoad.value = '';
+	inputLoad.click();
+}
+
+//
+// Save
+//
+
+var aSave = document.createElement('a');
+aSave.download = 'addresses.json';
+aSave.textContent = 'addresses.json';
+
+function saveAddressFile()
+{
+	//aSave.href = 'data:text/json;charset=UTF-8,' + encodeURIComponent(JSON.stringify(addresses));
+	aSave.href = 'data:application/octet-stream,' + encodeURIComponent(JSON.stringify(addresses));
+	aSave.click();
+}
+
+//
+// Add Address
+//
+
+function queryAddAddress()
+{
+	addAddressDialog.style.display='block';
+}
+
+function cancelAddAddress()
+{
+	addAddressDialog.style.display='none';
+}
+
+function doneAddAddress()
+{
+	addAddressDialog.style.display='none';
+	var address = {
+		name : addAddressName.value,
+		address : addAddressAddress.value,
+	};
+	addresses.push(address);
+	bindAddressToTable(address);
+	saveButton.disabled = false;
+	generateAllButton.disabled = false;
+}
+
+//
+// Update All
+//
+
+function generateAll()
+{
+	for (var i = 1; i < tbody.children.length; i++)
+	{
+		var tr = tbody.children[i];
+		if (tr.children.length < 4)
+		{
+			continue;
+		}
+		trGetCol(tr, 2).children[1].click();
+	}
+}
+
+</script>
+
+</body>
+</html>

@@ -1,0 +1,208 @@
+<html>
+<body>
+
+<script src="js/csv.js"></script>
+
+<button onclick="addFiles()">Add Files</button>
+<button id="generateButton" disabled onclick="generate()">Generate</button>
+<a></a>
+<br>
+
+<table>
+<tbody>
+<tr><td>Files</td><td></td></tr>
+</tbody>
+</table>
+<script>
+
+var tbody = document.querySelector('tbody');
+var generateButton = document.getElementById('generateButton');
+var link = document.querySelector('a');
+
+var inputs = [];
+
+function filesSelected()
+{
+	if (this.files.length == 0)
+	{
+		return;
+	}
+	var input = this;
+	inputs.push(input);
+	var tr = document.createElement('tr');
+	var td = document.createElement('td');
+	td.insertAdjacentHTML('beforeend', input.files[0].name);
+	for (var i = 1; i < input.files.length; i++)
+	{
+		td.insertAdjacentHTML('beforeend', '<br>' + input.files[i].name);
+	}
+	tr.appendChild(td);
+	var td = document.createElement('td');
+	var button = document.createElement('button');
+	button.onclick = function ()
+	{
+		var index = inputs.indexOf(input);
+		inputs.splice(index, 1);
+		tbody.removeChild(tr);
+		if (inputs.length == 0)
+		{
+			generateButton.disabled = true;
+		}
+	}
+	td.appendChild(button);
+	tr.appendChild(td);
+	button.textContent = 'Remove';
+	tbody.appendChild(tr);
+	generateButton.disabled = false;
+}
+
+function addFiles()
+{
+	var input = document.createElement('input');
+	input.type = 'file';
+	input.multiple = true;
+	input.onchange = filesSelected;
+	input.click();
+}
+
+
+
+
+function indexOfSubstring(arr, string)
+{
+  var i;
+  for(i = 0; i < arr.length; ++i)
+  {
+    if (arr[i].search(string) != -1)
+    {
+      break;
+    }
+  }
+  return i;
+}
+
+
+
+var coinbase = []
+var coinbaseTotal = 0;
+
+function integrateCoinbaseCSV(csv, filename)
+{
+	if (csv.length == 0)
+	{
+		return false;
+	}
+
+	var csvTable = 3;
+	var timeIndex = csv[csvTable].indexOf('Timestamp');
+	var btcIndex = csv[csvTable].indexOf('BTC Amount');
+	var toIndex = csv[csvTable].indexOf('To');
+	var usdIndex = csv[csvTable].indexOf('Transfer Total');
+	var notesIndex = csv[csvTable].indexOf('Notes');
+	var hashIndex = indexOfSubstring(csv[csvTable],'Bitcoin Hash');
+
+	for (var t = 4; t < csv.length; ++t)
+	{
+		////// helped reproduce a bug in python code!!!!!!
+		//////var date = new Date(csv[t][timeIndex].substr(0,csv[t][timeIndex].lastIndexOf(' ')) + ' -0800');
+		var date = new Date(csv[t][timeIndex]);
+		var time = date.getTime()/1000;
+		var btc = parseFloat(csv[t][btcIndex]);
+		var usd = '';
+		if (csv[t][usdIndex].length > 0)
+		{
+			usd = parseFloat(csv[t][usdIndex]) / btc; // we want rates
+			//console.log( usd + ' ' + btc + ' ' + parseFloat(csv[t][usdIndex]));
+		}
+		else if (btc > 0)
+		{
+			if (csv[t][notesIndex].length != 0)
+			{
+				var notes = csv[t][notesIndex];
+				var s = notes.search('\\$');
+				if (s != -1)
+				{
+					notes = notes.substr(s + 1);
+					var e = notes.search('\\. ');
+					if (e != -1)
+					{
+						usd = parseFloat(notes.substr(0,6)) / btc; // we want rates
+						//console.log( usd + ' ' + btc + ' ' + parseFloat(notes.substr(0,6)));
+					}
+				}
+				console.log(filename + '('+ t + '): warning: no USD, but found in Notes: $' + usd);
+			}
+			else if (csv[t][hashIndex].length != 0)
+			{
+				console.log(filename + '('+ t + '): warning: no USD, no Notes, but found hash:' + csv[t][hashIndex]);
+			}
+			else
+			{
+				console.log(filename + '('+ t + '): error: no USD, no Notes, no Hash?!');
+			}
+		}
+		var to = csv[t][toIndex];
+		var hash = csv[t][hashIndex];
+		coinbase.push([time,btc,usd,hash,filename + ':' + t]);
+
+		coinbaseTotal += btc;
+	}
+}
+
+var files = [];
+var fileName = '';
+var fileIndex = 0;
+
+function onDone()
+{
+	coinbase.sort(function (a,b) {return a[0]-b[0]});
+	var text = CSV.stringify(coinbase);
+	link.href = 'data:text/csv;charset=UTF-8,' + encodeURIComponent(text);
+	link.download = 'coinbase.csv';
+	link.textContent = 'coinbase.csv';
+}
+
+function readerOnLoad(e)
+{
+	var csv = CSV.parse(this.result);
+	integrateCoinbaseCSV(csv, fileName);
+	readNext();
+}
+
+function readNext()
+{
+	if (fileIndex >= files.length)
+	{
+		onDone();
+		return;
+	}
+	var reader = new FileReader();
+	reader.onload = readerOnLoad;
+	reader.readAsText(files[fileIndex]);
+	fileName = files[fileIndex].name;
+	fileIndex++;
+}
+
+function generate()
+{
+	coinbase = [];
+	coinbaseTotal = 0;
+
+	files = [];
+	for (var i = 0; i < inputs.length; i++)
+	{
+		var input = inputs[i];
+		for (var j = 0; j < input.files.length; j++)
+		{
+			var file = input.files[j];
+			files.push(file);
+		}
+	}
+
+	fileIndex = 0;
+	readNext();
+}
+</script>
+
+</body>
+</html>
