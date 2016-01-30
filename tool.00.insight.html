@@ -80,54 +80,11 @@ function wget(theUrl)
 	return xmlHttp;
 }
 
-/*function getBlockChain(btaddr)
-{
-	var addr = 'https://blockchain.info/address/' + btaddr + '?cors=true&format=json';
-	result = wget(addr);
-	if (result.status != 200)
-	{
-		console.log('failed to load (' + result.status + '): ' + addr);
-		return undefined;
-	}
-	console.log('loaded : ' + addr);
-	var js = JSON.parse(result.responseText);
-	while (js.txs.length < js.n_tx)
-	{
-		result = wget(addr + '&offset=' + js.txs.length);
-		if (result.status != 200)
-		{
-			console.log('failed to load (' + result.status + '): ' + addr + '&offset=' + js.txs.length);
-			return undefined;
-		}
-		console.log('loaded : ' + addr + '&offset=' + js.txs.length);
-		var js2 = JSON.parse(result.responseText);
-		js.txs = js.txs.concat(js2.txs);
-	}
-	return js;
-}
-
-function getBlockExplorer(btaddr)
-{
-	var addr = 'https://blockexplorer.com/api/txs/?address=' + btaddr;
-	var addr = 'https://insight.bitpay.com/api/txs/?address=' + btaddr;
-	//https://localbitcoinschain.com/api/txs/?address=
-	//https://search.bitaccess.ca/api/txs/?address=
-	result = wget(addr);
-	if (result.status != 200)
-	{
-		console.log('failed to load (' + result.status + '): ' + addr);
-		return undefined;
-	}
-	console.log('loaded : ' + addr);
-	var js = JSON.parse(result.responseText);
-	return js;
-}*/
-
 var insightSites = [
 	'blockexplorer.com',
 	'insight.bitpay.com',
 	'localbitcoinschain.com',
-	'search.bitaccess.ca',
+//	'search.bitaccess.ca',
 ];
 
 var sourceSelect = document.getElementById('sourceSelect');
