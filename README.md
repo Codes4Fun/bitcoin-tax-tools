@@ -9,33 +9,42 @@ These are not guaranteed to be without risk, or even to give you the lowest tax 
 
 ## privacy
 
-These tools do not ever upload your personal data, and while not necessary to use these tools, to get the most privacy, it is recommend you run your own insight server node:
+These tools do not ever upload your personal data, but they allow you to download data from public servers and that data can be linked to your IP address.
+
+While not necessary to use these tools, if you want the most privacy, it is recommended you run your own insight server node:
 
 > https://github.com/bitpay/insight-api
 
-After you have downloaded all the bitcoin blocks you will be able to download transaction data privately.
+After you have downloaded all the bitcoin blocks (which can take some time depending on performance of your computer and internet) you will be able to download transaction data privately.
 
-And since you created a node you can also help decentralize the network by keeping the node running :)
+And since you will have created a node you can also help decentralize the network by keeping the node running :)
 
 ## workflow
 
 1) Gather transactions.
- - For bitcoin wallets generate download links for wallet transactions (in json) using this [**tool**](tool.00.insight.html). Here it is useful to have a private insight server but public servers are an option here as well.
- - For virtual wallets the tools have their own [transaction csv format](#transaction).
- - Coinbase csv files can be converted with this [**tool**](tool.00.coinbase.html).
- - For other virtual wallets you will need to either develop a tool or manually create a [transaction csv format](#transaction) file.
+ - For bitcoin wallets with addresses, generate download links for address transactions (in json) using this [**tool**](tool.00.insight.html).
+  - Here it is useful to have a private insight server but public servers are listed in the tool as well.
+  - Many wallets have hidden addresses for dealing with change, you should probably review the transactions to look for this and include these addresses.
+ - For virtual wallets the tools use their own [transaction csv format](#transaction).
+  - If you use coinbase you can convert their transaction csv files with this [**tool**](tool.00.coinbase.html).
+  - For other virtual wallets you will need to either
+    + Use this [**tool**](tool.00.transaction.csv.html) to manual create these csv files.
+    + develop your own automated conversion tool to this [transaction csv format](#transaction).
+    + or [request](https://github.com/Codes4Fun/bitcoin-tax-tools/issues) for a conversion tool to be made.
 
 2) Generate input.csv and output.csv files with this [**tool**](tool.01.generateIO.insight.html).
  - input.csv contains all transactions for acquired BTC.
  - output.csv contains all transactions of spent BTC.
 
-3) For a given year generate TXF and compute gains with this [**tool**](tool.02.report.html)
+3) For a given year generate TXF and compute gains with this [**tool**](tool.02.report.html).
  - taxes.txf a document that can be imported into tax software.
  - taxes.txt a document showing your years income, cost, and gains.
  - taxes.csv alternative format of TXF.
 
 4) Import TXF file into your tax software.
  - TurboTax Online does not support TXF files. If you want to use TurboTax, use TurboTax Premier as it supports investments and will generate the necessary form from the TXF.
+
+Here is a [**csv viewer**](tool.03.csv.viewer.html).
 
 ## <a name="transaction"></a>transaction CSV format
 
@@ -45,6 +54,8 @@ There is a [tool](tool.00.coinbase.html) for automated conversion of coinbase cs
 
 If there are other data formats you think should be automated make it an [issue](https://github.com/Codes4Fun/bitcoin-tax-tools/issues)! Or write code and submit a patch!
 
+There is a [tool](tool.00.transaction.csv.html) to help create/edit these transaction csv files.
+
 These files have no headers but each column consists of:
 
 "timestamp", "BTC delta", "exchange rate", "transaction id", "source"
@@ -52,11 +63,11 @@ These files have no headers but each column consists of:
 (Note the necessity of quotes around each column value)
 
 where:
- - timestamp - is Unix time, seconds passed since January 1, 1970 UTC.
- - BTC delta - this is how much was gained or lost in BTC in the transaction.
- - exchange rate - this was the exchange rate at the time of exchange. If you sold 2 BTC for 400, this should be 200 (400/2). If you don't know the rate place double quotes "", and it will pull from the rates binary.
- - transaction id - this is the bitcoin transaction id, knowing this allows wallet to wallet transactions to not be counted as a sale/buy.
- - source - this is just for debugging purposes, it lets you know where this transaction came from (a coinbase csv or a bitcoin address, etc).
+ - **timestamp** - is Unix time, seconds passed since January 1, 1970 UTC.
+ - **BTC delta** - this is how much was gained or lost in BTC in the transaction.
+ - **exchange rate** - this was the exchange rate at the time of exchange. If you sold 2 BTC for 400, this should be 200 (400/2). If you don't know the rate place double quotes "", and it will pull from the rates binary.
+ - **transaction id** - this is the bitcoin transaction id, knowing this allows wallet to wallet transfers to not be counted as a sale/buy (though the fee will be counted).
+ - **source** - this is just for debugging purposes, it lets you know where this transaction came from (a coinbase csv or a bitcoin address, etc).
 
 ## exchange rate data
 
@@ -70,7 +81,7 @@ To use your own built rates you then need to run it locally and replace the rate
 
 ## run it locally!
 
-You can run it locally using node.js/npm, pull the files from github or download and uncompress them and then from command line:
+You can run it locally using node.js/npm, use git to clone from github or [download](https://github.com/Codes4Fun/bitcoin-tax-tools/archive/gh-pages.zip) and uncompress them and then from command line:
 
 ```
 npm install -g grunt-cli
@@ -99,4 +110,4 @@ report bugs, feature requests, etc : https://github.com/Codes4Fun/bitcoin-tax-to
 
 create bitcoin bounties on those features or bug fixes : https://www.bountysource.com/
 
-tip me? [17Mqj42oV1xtMWt16MBPyveZZXKUaJFH1H](https://blockchain.info/address/17Mqj42oV1xtMWt16MBPyveZZXKUaJFH1H)
+tips can go here : [17Mqj42oV1xtMWt16MBPyveZZXKUaJFH1H](https://blockchain.info/address/17Mqj42oV1xtMWt16MBPyveZZXKUaJFH1H)

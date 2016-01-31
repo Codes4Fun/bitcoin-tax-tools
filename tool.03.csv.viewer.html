@@ -1,0 +1,86 @@
+<html>
+
+<head>
+<style>
+td {
+	white-space:nowrap;
+	padding-left:4px;
+	padding-right:4px;
+	background-color:#eeeeee;
+}
+.line {
+	background-color: white;
+}
+</style>
+</head>
+
+<body>
+
+<script src="js/csv.js"></script>
+
+<input type="file" onchange="readFile(this.files)">
+
+<script>
+
+var csv; // for looking in the console
+
+function removeTable()
+{
+	var table = document.querySelector('table');
+	if (table)
+	{
+		document.body.removeChild(table);
+	}
+}
+
+function createTable(fileContent, fileName)
+{
+	try {
+		csv = CSV.parse(fileContent);
+	} catch (e) {
+		document.body.innerHTML += '<table><tbody><tr><td>Failed to load : ' + fileName + "</td></tr></tbody></table>";
+		return;
+	}
+
+	var table = document.createElement('table');
+	document.body.appendChild(table);
+
+	var tbody = document.createElement('tbody');
+	table.appendChild(tbody);
+
+	for (var i = 0; i < csv.length; ++i)
+	{
+		var line = csv[i];
+		var html = '<tr><td class="line">' + (i + 1) + '</td>';
+		for (var j = 0; j < line.length; ++j)
+		{
+			html += '<td>' + line[j] + '</td>';
+		}
+		html += '</tr>\n';
+		tbody.innerHTML += html;
+	}
+}
+
+function readFile(files)
+{
+	removeTable();
+
+	if (files.length != 1)
+	{
+		return;
+	}
+
+	var reader = new FileReader();
+	reader.onload = function ()
+	{
+		createTable(reader.result, files[0].name);
+	}
+	reader.readAsText(files[0]);
+}
+
+</script>
+</div>
+
+</body>
+
+</html>

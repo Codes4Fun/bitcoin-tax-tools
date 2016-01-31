@@ -1,0 +1,134 @@
+<html>
+
+<head>
+<style>
+td {
+	white-space:nowrap;
+	padding-left:4px;
+	padding-right:4px;
+	background-color:#eeeeee;
+}
+.line {
+	background-color: white;
+}
+.edit {
+	width:100%;
+}
+</style>
+</head>
+
+<body>
+
+<script src="js/csv.js"></script>
+
+<input type="file" onchange="readFile(this.files)"><br>
+<button onclick="generate()">Generate</button> <a download="transations.csv"></a><br>
+<table>
+<tbody>
+<tr>
+<td class="line">line #</td>
+<td style="width:80px">timestamp</td>
+<td style="width:80px">BTC</td>
+<td style="width:80px">exchange rate</td>
+<td style="width:450px">transaction id</td>
+<td>source</td>
+</tr>
+</tbody>
+</table>
+
+<button onclick="createLine()">Add Line</button>
+
+<script>
+
+var tbody = document.querySelector('tbody');
+var link = document.querySelector('a');
+
+var csv; // for looking in the console
+
+function clearTable()
+{
+	while (tbody.children.length > 1)
+	{
+		tbody.removeChild(tbody.lastElementChild);
+	}
+}
+
+function fillTable(fileContent, fileName)
+{
+	try {
+		csv = CSV.parse(fileContent);
+	} catch (e) {
+		document.body.innerHTML += '<table><tbody><tr><td>Failed to load : ' + fileName + "</td></tr></tbody></table>";
+		return;
+	}
+
+	for (var i = 0; i < csv.length; ++i)
+	{
+		var line = csv[i];
+		var html = '<tr><td class="line">' + (i + 1) + '</td>';
+		for (var j = 0; j < line.length; ++j)
+		{
+			html += '<td><input class="edit" type="text" value="' + line[j] + '"></td>';
+		}
+		html += '</tr>\n';
+		tbody.innerHTML += html;
+	}
+}
+
+function readFile(files)
+{
+	clearTable();
+
+	if (files.length != 1)
+	{
+		createLine();
+		return;
+	}
+
+	var reader = new FileReader();
+	reader.onload = function ()
+	{
+		fillTable(reader.result, files[0].name);
+	}
+	reader.readAsText(files[0]);
+}
+
+function createLine()
+{
+	var html = '<tr><td class="line">' + tbody.children.length + '</td>';
+	for (var j = 0; j < 5; ++j)
+	{
+		html += '<td><input class="edit" type="text" value=""></td>';
+	}
+	html += '</tr>\n';
+	tbody.innerHTML += html;
+	tbody.children[tbody.children.length-1].children[1].children[0].focus();
+}
+
+createLine();
+
+function generate()
+{
+	csv = [];
+	for (var i = 1; i < tbody.children.length; i++)
+	{
+		var tr = tbody.children[i];
+		var csvLine = [];
+		for (var j = 1; j < tr.children.length; j++)
+		{
+			var td = tr.children[j];
+			var input = td.children[0];
+			csvLine.push(input.value);
+		}
+		csv.push(csvLine);
+	}
+	link.textContent = link.download;
+	link.href = "data:application/octet-stream," + encodeURIComponent(CSV.stringify(csv));
+}
+
+</script>
+</div>
+
+</body>
+
+</html>
