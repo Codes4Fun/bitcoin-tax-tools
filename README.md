@@ -20,22 +20,22 @@ And since you created a node you can also help decentralize the network by keepi
 ## workflow
 
 1) Gather transactions.
- - For bitcoin wallets generate download links for wallet transactions (in json) using this [tool](tool.00.insight.html). Here it is useful to have a private insight server but public servers are an option here as well.
+ - For bitcoin wallets generate download links for wallet transactions (in json) using this [**tool**](tool.00.insight.html). Here it is useful to have a private insight server but public servers are an option here as well.
  - For virtual wallets the tools have their own [transaction csv format](#transaction).
- - Coinbase csv files can be converted with this [tool](tool.00.coinbase.html).
+ - Coinbase csv files can be converted with this [**tool**](tool.00.coinbase.html).
  - For other virtual wallets you will need to either develop a tool or manually create a [transaction csv format](#transaction) file.
 
-2) Generate input.csv and output.csv files with this [tool](tool.01.generateIO.insight.html).
+2) Generate input.csv and output.csv files with this [**tool**](tool.01.generateIO.insight.html).
  - input.csv contains all transactions for acquired BTC.
  - output.csv contains all transactions of spent BTC.
 
-3) For a given year generate TXF and compute gains with this [tool](tool.02.report.html)
+3) For a given year generate TXF and compute gains with this [**tool**](tool.02.report.html)
  - taxes.txf a document that can be imported into tax software.
  - taxes.txt a document showing your years income, cost, and gains.
  - taxes.csv alternative format of TXF.
 
 4) Import TXF file into your tax software.
- - TurboTax Online does not support TXF files, what you want it TurboTax Premier as it supports investments and will generate the necessary form from the TXF.
+ - TurboTax Online does not support TXF files. If you want to use TurboTax, use TurboTax Premier as it supports investments and will generate the necessary form from the TXF.
 
 ## <a name="transaction"></a>transaction CSV format
 
@@ -54,7 +54,7 @@ These files have no headers but each column consists of:
 where:
  - timestamp - is Unix time, seconds passed since January 1, 1970 UTC.
  - BTC delta - this is how much was gained or lost in BTC in the transaction.
- - exchange rate - this was the exchange rate at the time of exchange. If you sold 2 BTC for 400, this should be 200 (400/2).
+ - exchange rate - this was the exchange rate at the time of exchange. If you sold 2 BTC for 400, this should be 200 (400/2). If you don't know the rate place double quotes "", and it will pull from the rates binary.
  - transaction id - this is the bitcoin transaction id, knowing this allows wallet to wallet transactions to not be counted as a sale/buy.
  - source - this is just for debugging purposes, it lets you know where this transaction came from (a coinbase csv or a bitcoin address, etc).
 
