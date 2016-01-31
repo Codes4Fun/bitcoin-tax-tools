@@ -56,6 +56,7 @@ This tool generates links to download transactions for bitcoin addresses.<br>
 <button onclick="queryAddressFile()">Load...</button>
 <button id="saveButton" disabled onclick="saveAddressFile()">Save</button>
 <button id="generateAllButton" disabled onclick="generateAll()">Generate All</button>
+<a></a>
 <br>
 
 <table>
@@ -223,12 +224,12 @@ function queryAddressFile()
 // Save
 //
 
-var aSave = document.createElement('a');
+var aSave = document.querySelector('a');
 aSave.download = 'addresses.json';
-aSave.textContent = 'addresses.json';
 
 function saveAddressFile()
 {
+	aSave.textContent = 'addresses.json';
 	//aSave.href = 'data:text/json;charset=UTF-8,' + encodeURIComponent(JSON.stringify(addresses));
 	aSave.href = 'data:application/octet-stream,' + encodeURIComponent(JSON.stringify(addresses));
 	aSave.click();
