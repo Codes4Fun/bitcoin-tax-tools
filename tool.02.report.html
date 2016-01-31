@@ -88,18 +88,20 @@ function generate()
 			var tsEnd = (new Date((year + 1) + '-01-01')).getTime() / 1000;
 
 			var taxes = generateTaxes(inputCSV, outputCSV, tsStart, tsEnd);
+			
+			var fileBaseName = 'taxes_' + year;
 
 			taxesCSVLink.href = 'data:text/csv;charset=UTF-8,' + encodeURIComponent(CSV.stringify(taxes.taxes));
-			taxesCSVLink.download = 'taxes.csv'
-			taxesCSVLink.textContent = 'taxes.csv'
+			taxesCSVLink.download = fileBaseName + '.csv'
+			taxesCSVLink.textContent = fileBaseName + '.csv'
 
 			taxesTXFLink.href = 'data:text/txf;charset=UTF-8,' + encodeURIComponent(taxes.txf);
-			taxesTXFLink.download = 'taxes.txf'
-			taxesTXFLink.textContent = 'taxes.txf'
+			taxesTXFLink.download = fileBaseName + '.txf'
+			taxesTXFLink.textContent = fileBaseName + '.txf'
 
 			taxesTXTLink.href = 'data:text/txt;charset=UTF-8,' + encodeURIComponent('Top Line: ' + taxes.topLine + '\r\nCost: ' + taxes.cost + '\r\nBottom Line (gains): ' + taxes.bottomLine);
-			taxesTXTLink.download = 'taxes.txt'
-			taxesTXTLink.textContent = 'taxes.txt'
+			taxesTXTLink.download = fileBaseName + '.txt'
+			taxesTXTLink.textContent = fileBaseName + '.txt'
 
 			incomeText.innerHTML = 'Top Line: ' + taxes.topLine + '<br>Cost: ' + taxes.cost + '<br>Bottom Line (gains): ' + taxes.bottomLine;
 		}
