@@ -105,7 +105,8 @@ function integrateCoinbaseCSV(csv, filename)
 	{
 		////// helped reproduce a bug in python code!!!!!!
 		//////var date = new Date(csv[t][timeIndex].substr(0,csv[t][timeIndex].lastIndexOf(' ')) + ' -0800');
-		var date = new Date(csv[t][timeIndex]);
+		var dateSplit = csv[t][timeIndex].split(' ');
+		var date = new Date(dateSplit[0] + 'T' + dateSplit[1] + dateSplit[2]);
 		var time = date.getTime()/1000;
 		var btc = parseFloat(csv[t][btcIndex]);
 		var usd = '';
@@ -162,9 +163,12 @@ function onDone()
 	link.textContent = 'coinbase.csv';
 }
 
+var csvsTemp = []
+
 function readerOnLoad(e)
 {
 	var csv = CSV.parse(this.result);
+	csvsTemp.push(csv);
 	integrateCoinbaseCSV(csv, fileName);
 	readNext();
 }
