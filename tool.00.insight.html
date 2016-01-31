@@ -41,16 +41,20 @@ td {
 <button style="float:right; margin-right:9px;" onclick="doneAddAddress()">Okay</button></div>
 </div>
 </div>
-
-This tool generates links to download transactions for addresses.<br>
-Choose Website: <br>
+This tool generates links to download transactions for bitcoin addresses.<br>
+<br>
+1) Start by adding your bitcoin public addresses at the bottom. You can save your list of addresses to quickly reopen them in the future.<br>
+<br>
+2) Next choose where you want to download the transaction json files from (default is random): <br>
 <form id="sourceSelect">
 </form>
+3) Next press Generate All.<br>
 <br>
+4) Finally download each link (right click and choose save as) for firefox you need to manually name the wallet files as bitcoin_address.json where bitcoin_address should be replaced with the actual address.<br>
 <br>
+<button onclick="queryAddAddress()">Add Address...</button>
 <button onclick="queryAddressFile()">Load...</button>
 <button id="saveButton" disabled onclick="saveAddressFile()">Save</button>
-<button onclick="queryAddAddress()">Add Address...</button>
 <button id="generateAllButton" disabled onclick="generateAll()">Generate All</button>
 <br>
 
@@ -94,7 +98,7 @@ for (var i = 0; i < insightSites.length; i++)
 	var site = insightSites[i];
 	sourceSelect.insertAdjacentHTML('beforeend', '<input type="radio" name="source" value="' + site + '">' + site + '<br>');
 }
-sourceSelect.insertAdjacentHTML('beforeend', '<input type="radio" name="source" value="custom">another insight api website: <input type="text" id="insightURL">');
+sourceSelect.insertAdjacentHTML('beforeend', '<input type="radio" name="source" value="custom">private insight server: <input type="text" id="insightURL">');
 
 function generateLink(address)
 {
