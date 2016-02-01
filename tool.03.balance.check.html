@@ -1,0 +1,237 @@
+<html>
+<body>
+
+<script src="js/csv.js"></script>
+
+<script src="js/modules.js"></script>
+<script>
+var bitcoin = modules.bitcoin;
+//var Buffer = modules.buffer.Buffer;
+//var Bip38 = modules.bip38;
+//var bip38 = new Bip38()
+</script>
+
+<button onclick="addFiles()">Add Files</button>
+<button id="computeBalanceButton" disabled onclick="computeBalance()">Compute Balance</button>
+<div id="outputText"></div>
+<br>
+
+<table>
+<tbody>
+<tr><td>Files</td><td></td></tr>
+</tbody>
+</table>
+<script>
+
+var tbody = document.querySelector('tbody');
+var generateButton = document.getElementById('computeBalanceButton');
+var outputText = document.getElementById('outputText');
+
+function getFileExtension(filename)
+{
+	var index = filename.lastIndexOf('.');
+	if (index != -1)
+	{
+		return filename.slice(index+1);
+	}
+	return '';
+}
+
+function getFileBaseName(filename)
+{
+	var extIndex = filename.lastIndexOf('.');
+	if (extIndex == -1)
+	{
+		extIndex = filename.length;
+	}
+	var pathIndex = filename.lastIndexOf('/');
+	return filename.slice(pathIndex+1, extIndex);
+}
+
+function isAddress(string) {
+	try {
+		bitcoin.address.fromBase58Check(string)
+	} catch (e) {
+		return false
+	}
+
+	return true
+}
+
+
+var inputs = [];
+
+function filesSelected()
+{
+	if (this.files.length == 0)
+	{
+		return;
+	}
+	for (var i = 0; i < this.files.length; i++)
+	{
+		var extension = getFileExtension(this.files[i].name);
+		if (extension != 'csv' && extension != 'json')
+		{
+			alert('expecting csv or json file but got: ' + this.files[i].name);
+			return;
+		}
+		if (extension == 'json')
+		{
+			var baseName = getFileBaseName(this.files[i].name);
+			if (!isAddress(baseName))
+			{
+				alert('expected json file with bitcoin address as filename but got: ' + this.files[i].name);
+				return;
+			}
+		}
+	}
+	var input = this;
+	inputs.push(input);
+	var tr = document.createElement('tr');
+	var td = document.createElement('td');
+	td.insertAdjacentHTML('beforeend', input.files[0].name);
+	for (var i = 1; i < input.files.length; i++)
+	{
+		td.insertAdjacentHTML('beforeend', '<br>' + input.files[i].name);
+	}
+	tr.appendChild(td);
+	var td = document.createElement('td');
+	var button = document.createElement('button');
+	button.onclick = function ()
+	{
+		var index = inputs.indexOf(input);
+		inputs.splice(index, 1);
+		tbody.removeChild(tr);
+		if (inputs.length == 0)
+		{
+			computeBalanceButton.disabled = true;
+		}
+	}
+	td.appendChild(button);
+	tr.appendChild(td);
+	button.textContent = 'Remove';
+	tbody.appendChild(tr);
+	computeBalanceButton.disabled = false;
+}
+
+function addFiles()
+{
+	var input = document.createElement('input');
+	input.type = 'file';
+	input.multiple = true;
+	input.onchange = filesSelected;
+	input.click();
+}
+
+
+
+var totalBalance = 0;
+
+function integrateCSV(csv)
+{
+	for (var i = 0; i < csv.length; i++)
+	{
+		totalBalance += parseFloat(csv[i][1]);
+	}
+}
+
+function integrateJSON(wallet, address)
+{
+	for (var t = 0; t < wallet.txs.length; t++)
+	{
+		var tx = wallet.txs[t];
+		var balance = 0;
+		for (var ti = 0; ti < tx.vin.length; ++ti)
+		{
+			if (tx.vin[ti].addr != address)
+			{
+				continue;
+			}
+			balance -= parseFloat(tx.vin[ti].value);
+		}
+		for (var to = 0; to < tx.vout.length; ++to)
+		{
+			var scriptAddresses = tx.vout[to].scriptPubKey.addresses;
+			var sa = 0;
+			for (; sa < scriptAddresses.length; sa++)
+			{
+				if (scriptAddresses[sa] == address)
+				{
+					break;
+				}
+			}
+			if (sa == scriptAddresses.length)
+			{
+				continue;
+			}
+			balance += parseFloat(tx.vout[to].value);
+		}
+		totalBalance += balance;
+	}
+}
+
+
+
+var files = [];
+var fileName = '';
+var fileIndex = 0;
+
+function onDone()
+{
+	outputText.textContent = 'balance : ' + totalBalance;
+}
+
+function readerOnLoad(e)
+{
+	var extension = getFileExtension(fileName);
+	if (extension == 'csv')
+	{
+		var csv = CSV.parse(this.result);
+		integrateCSV(csv);
+	}
+	else
+	{
+		var json = JSON.parse(this.result);
+		integrateJSON(json, getFileBaseName(fileName));
+	}
+	readNext();
+}
+
+function readNext()
+{
+	if (fileIndex >= files.length)
+	{
+		onDone();
+		return;
+	}
+	var reader = new FileReader();
+	reader.onload = readerOnLoad;
+	reader.readAsText(files[fileIndex]);
+	fileName = files[fileIndex].name;
+	fileIndex++;
+}
+
+function computeBalance()
+{
+	totalBalance = 0;
+
+	files = [];
+	// gather files
+	for (var i = 0; i < inputs.length; i++)
+	{
+		var input = inputs[i];
+		for (var j = 0; j < input.files.length; j++)
+		{
+			files.push(input.files[j]);
+		}
+	}
+
+	// start reading  files
+	fileIndex = 0;
+	readNext();
+}
+
+</script>
+
+</body>
+</html>

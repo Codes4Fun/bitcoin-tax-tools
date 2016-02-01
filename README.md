@@ -24,7 +24,7 @@ And since you will have created a node you can also help decentralize the networ
 1) Gather transactions.
  - For bitcoin wallets with addresses, generate download links for address transactions (in json) using this [**tool**](tool.00.insight.html).
   - Here it is useful to have a private insight server but public servers are listed in the tool as well.
-  - Many wallets have hidden addresses for dealing with change, you should probably review the transactions to look for this and include these addresses.
+  - Many wallets have hidden addresses for dealing with change, you should probably review the transactions to look for this and include these addresses. I found for example the android bitcoin wallet now has hidden addresses and you can't simply download the json, you need to use a blockchain explorer to find those transactions.
  - For virtual wallets the tools use their own [transaction csv format](#transaction).
   - If you use coinbase you can convert their transaction csv files with this [**tool**](tool.00.coinbase.html).
   - For other virtual wallets you will need to either
@@ -44,7 +44,11 @@ And since you will have created a node you can also help decentralize the networ
 4) Import TXF file into your tax software.
  - TurboTax Online does not support TXF files. If you want to use TurboTax, use TurboTax Premier as it supports investments and will generate the necessary form from the TXF.
 
-Here is a [**csv viewer**](tool.03.csv.viewer.html).
+## misc tools
+
+Here is a [**csv viewer**](tool.03.csv.viewer.html), use it to examine generated csv files.
+
+Here is a [**balance checker**](tool.03.balance.check.html), use it on grouped json/csv files to see if the balances correspond to wallets.
 
 ## <a name="transaction"></a>transaction CSV format
 
