@@ -1,0 +1,275 @@
+<html>
+<body>
+
+<script src="js/modules.js"></script>
+<script>
+var bitcoin = modules.bitcoin;
+//var Buffer = modules.buffer.Buffer;
+//var Bip38 = modules.bip38;
+//var bip38 = new Bip38()
+</script>
+
+1) Enter xpub key : <br>
+&nbsp;&nbsp;<input id="xpubInput" type="text" style="width:940px"><br>
+&nbsp;&nbsp;Or load from file : <input type="file" onchange="fileSelected(this.files)"><br>
+<br>
+
+2) Choose server to check for used addresses.
+&nbsp;&nbsp;<form id="sourceSelect"></form>
+
+3) How far to search before giving up : <input id="searchDepth" type="text" value="2"><br>
+<br>
+4) <button id="searchButton" onclick="search()">Search</button> and be patient might take a while. Ctrl-Shift-J (chrome) or Ctrl-Shift-K (firefox) to view the console logs.<br>
+<br>
+
+<button id="saveButton" disabled onclick="saveAddressFile()">Save Addresses</button> <a></a>
+
+<table>
+<tbody id="addressTable">
+<tr><td>Name</td><td>Address</td></tr>
+</tbody>
+</table>
+
+<script>
+
+var xpubInput = document.getElementById('xpubInput');
+var searchDepth = document.getElementById('searchDepth');
+var searchButton = document.getElementById('searchButton');
+var saveButton = document.getElementById('saveButton');
+var addressTable = document.getElementById('addressTable');
+
+var insightSites = [
+	'blockexplorer.com',
+	'insight.bitpay.com',
+	'localbitcoinschain.com',
+//	'search.bitaccess.ca',
+];
+
+var sourceSelect = document.getElementById('sourceSelect');
+sourceSelect.insertAdjacentHTML('beforeend', '<input type="radio" name="source" value="random" checked>random<br>');
+for (var i = 0; i < insightSites.length; i++)
+{
+	var site = insightSites[i];
+	sourceSelect.insertAdjacentHTML('beforeend', '<input type="radio" name="source" value="' + site + '">' + site + '<br>');
+}
+sourceSelect.insertAdjacentHTML('beforeend', '<input type="radio" name="source" value="custom">private insight server: <input type="text" id="insightURL">');
+
+
+
+function fileSelected(files)
+{
+	if (files.length != 1)
+	{
+		return;
+	}
+	var reader = new FileReader();
+	reader.onload = function ()
+	{
+		var start = reader.result.indexOf('xpub');
+		var xpub = reader.result.substr(start);
+		var end = xpub.search('[^123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]');
+		xpub = xpub.substr(0,end);
+		
+		xpubInput.value = xpub;
+	}
+	reader.readAsText(files[0]);
+}
+
+
+
+function generateLink(address)
+{
+	var value = sourceSelect.elements['source'].value
+	var link = 'https://';
+	switch (value)
+	{
+	case 'random':
+		link += insightSites[Math.trunc(Math.random()*insightSites.length)];
+		break;
+	case 'custom':
+		link += document.getElementById('insightURL').value;
+		break;
+	default:
+		link += value;
+	}
+	link += '/api/addr/' + address +'/totalReceived';
+	return link;
+}
+
+function trGetCol(tr, index)
+{
+	while (index >= tr.children.length)
+	{
+		var td = document.createElement('td');
+		tr.appendChild(td);
+	}
+	return tr.children[index];
+}
+
+function bindAddressToTable(address)
+{
+	var tr = document.createElement('tr');
+	trGetCol(tr, 0).textContent = address.name;
+	trGetCol(tr, 1).textContent = address.address;
+	addressTable.appendChild(tr);
+}
+
+var addresses = []
+
+var aSave = document.querySelector('a');
+aSave.download = 'addresses.json';
+
+function saveAddressFile()
+{
+	aSave.textContent = 'addresses.json';
+	//aSave.href = 'data:text/json;charset=UTF-8,' + encodeURIComponent(JSON.stringify(addresses));
+	aSave.href = 'data:application/octet-stream,' + encodeURIComponent(JSON.stringify(addresses));
+	aSave.click();
+}
+
+function onDone()
+{
+	saveButton.disabled = false;
+	for (var i = 0; i < addresses.length; i++)
+	{
+		bindAddressToTable(addresses[i]);
+	}
+}
+
+var curAddress;
+var curLink;
+var curPath;
+var curPathStr;
+var curDepth;
+var maxDepth;
+
+function onAddressLoad()
+{
+	//console.log('onAddressLoad');
+	var value = parseInt(this.responseText);
+	if (isNaN(value))
+	{
+		alert('bad value returned from link "' + curLink + '"');
+		return;
+	}
+	if (value > 0)
+	{
+		addresses.push({
+			name : curPathStr,
+			address : curAddress,
+		});
+		nextSearch(true);
+		return;
+	}
+	nextSearch(false);
+}
+
+function checkAddress()
+{
+	//console.log('checkAddress');
+	// debug logging
+	curPathStr = ''
+	var next = curPath;
+	while (next.parent)
+	{
+		curPathStr = '/' + next.index.toString() + curPathStr;
+		next = next.parent;
+	}
+	curPathStr = 'm' + curPathStr;
+	//
+	curAddress = curPath.node.getAddress();
+	curLink = generateLink(curAddress);
+	var req = new XMLHttpRequest();
+	req.open( "GET", curLink, true );
+	req.onload = onAddressLoad;
+	req.send();
+}
+
+function nextSearch(success)
+{
+	console.log(curPathStr + (success? ' success' : 'failed'));
+	if (success)
+	{
+		// check sibling
+		curPath.index++;
+		curPath.node = curPath.parent.node.derive(curPath.index);
+		curPath.success = true;
+	}
+	else if (curPath.index < maxDepth && curDepth < maxDepth)
+	{
+		// check children
+		var nextPath = {
+			index : 0,
+			node : curPath.node.derive(0),
+			success : false,
+			parent : curPath,
+		}
+		curPath = nextPath;
+		curDepth++;
+	}
+	else
+	{
+		curPath = curPath.parent;
+		if (!curPath.parent)
+		{
+			onDone();
+			return;
+		}
+		curDepth--;
+		curPath.index++;
+		if (curPath.index > maxDepth)
+		{
+			onDone();
+			return;
+		}
+		curPath.node = curPath.parent.node.derive(curPath.index);
+	}
+	checkAddress();
+}
+
+
+function search()
+{
+	console.log('search');
+	maxDepth = parseInt(searchDepth.value);
+	if (isNaN(maxDepth))
+	{
+		alert('Search depth value is not a number! with : ' + searchDepth.value);
+		return;
+	}
+	if (maxDepth < 1)
+	{
+		alert('Search depth value is less than 1! with : ' + searchDepth.value);
+		return;
+	}
+	var xpub = xpubInput.value;
+	try {
+		var node = new bitcoin.HDNode.fromBase58(xpub);
+	}
+	catch (e)
+	{
+		alert('Failed to parse xpub. Error : ' + e.message);
+		return;
+	}
+
+	addresses = []
+
+	curPathStr = 'm/0'; // debug
+	curDepth = 0;
+
+	curPath = {
+		index : 0,
+		node : node.derive(0),
+		success : false,
+		parent : {
+			node : node,
+		}
+	}
+	
+	checkAddress();
+}
+
+</script>
+
+</body>
+</html>

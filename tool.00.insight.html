@@ -77,14 +77,6 @@ var link = document.querySelector('a');
 
 var addresses = []
 
-function wget(theUrl)
-{
-	var xmlHttp = new XMLHttpRequest();
-	xmlHttp.open( "GET", theUrl, false );
-	xmlHttp.send();
-	return xmlHttp;
-}
-
 var insightSites = [
 	'blockexplorer.com',
 	'insight.bitpay.com',
@@ -103,7 +95,7 @@ sourceSelect.insertAdjacentHTML('beforeend', '<input type="radio" name="source" 
 
 function generateLink(address)
 {
-	var value = document.getElementById('sourceSelect').elements['source'].value
+	var value = sourceSelect.elements['source'].value
 	address.link = 'https://';
 	switch (value)
 	{

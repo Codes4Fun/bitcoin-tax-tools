@@ -24,7 +24,8 @@ And since you will have created a node you can also help decentralize the networ
 1) Gather transactions.
  - For bitcoin wallets with addresses, generate download links for address transactions (in json) using this [**tool**](tool.00.insight.html).
   - Here it is useful to have a private insight server but public servers are listed in the tool as well.
-  - Many wallets have hidden addresses for dealing with change, you should probably review the transactions to look for this and include these addresses. I found for example the android bitcoin wallet now has hidden addresses and you can't simply download the json, you need to use a blockchain explorer to find those transactions.
+  - Many wallets have hidden addresses for dealing with change, you should probably review the transactions to look for this and include these addresses.
+    + There is an xpub key search [**tool**](tool.00.xpub.insight.html), that will find your hidden/change addresses in wallets. You can export from the Android Bitcoin Wallet via 'Settings'>'Diagnostics'>'Show xpub' which allows you to "Share" to a file.
  - For virtual wallets the tools use their own [transaction csv format](#transaction).
   - If you use coinbase you can convert their transaction csv files with this [**tool**](tool.00.coinbase.html).
   - For other virtual wallets you will need to either
