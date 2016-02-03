@@ -17,6 +17,7 @@ Add transaction csv files and bitcoin address json files to generate input.csv a
 <button id="generateButton" disabled onclick="generate()">Generate</button>
 <a id="inputFileLink"></a>
 <a id="outputFileLink"></a>
+<a id="incomeFileLink"></a>
 <br>
 
 <table>
@@ -29,6 +30,7 @@ var tbody = document.querySelector('tbody');
 var generateButton = document.getElementById('generateButton');
 var inputFileLink = document.getElementById('inputFileLink');
 var outputFileLink = document.getElementById('outputFileLink');
+var incomeFileLink = document.getElementById('incomeFileLink');
 
 
 function getFileExtension(filename)
@@ -256,6 +258,7 @@ function filterTransactions(pre_transactions, maxTime)
 	var transactions = [];
 	var input = [];
 	var output = [];
+	var income = [];
 	var pendingRates = {};
 	for (var i = 0; i < pre_transactions.length; i++)
 	{
@@ -284,6 +287,11 @@ function filterTransactions(pre_transactions, maxTime)
 
 		if (tx[2].length == 0)
 		{
+			if (btc > 0)
+			{
+				// maybe mined or other income.
+				income.push(tx);
+			}
 			addRateTs(pendingRates, transactions.length, time);
 		}
 		transactions.push(tx);
@@ -312,10 +320,12 @@ function filterTransactions(pre_transactions, maxTime)
 
 	input.sort(function(a,b) { return parseInt(a[0]) - parseInt(b[0]) } );
 	output.sort(function(a,b) { return parseInt(a[0]) - parseInt(b[0]) } );
+	income.sort(function(a,b) { return parseInt(a[0]) - parseInt(b[0]) } );
 
 	return {
 		input : input,
 		output : output,
+		income : income,
 		transactions : transactions
 	};
 }
@@ -340,6 +350,10 @@ function onDone()
 	outputFileLink.href = 'data:text/csv;charset=UTF-8,' + encodeURIComponent(CSV.stringify(inout.output));
 	outputFileLink.download = 'output.csv'
 	outputFileLink.textContent = 'output.csv'
+
+	incomeFileLink.href = 'data:text/csv;charset=UTF-8,' + encodeURIComponent(CSV.stringify(inout.income));
+	incomeFileLink.download = 'income.csv'
+	incomeFileLink.textContent = 'income.csv'
 }
 
 function readerOnLoad(e)

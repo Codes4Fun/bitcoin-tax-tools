@@ -4,6 +4,8 @@ Use these tools to generate a TXF document that can be imported into tax softwar
 
  - currently only supports FIFO.
  - uses bitstamp exchange rates which can be changed to other exchanges if run locally.
+ - does not track wash sales.
+ - does not allow for manually setting the cost basis (would be useful for donations or refunds).
 
 These are not guaranteed to be without risk, or even to give you the lowest tax rate. You should go to a tax professional or [online services](https://en.bitcoin.it/wiki/Tax_compliance#Accounting_and_Tax_Compliance_Software) if you need that, but even if you do that consider using these tools a supplement, not just to double check your taxes but also to double check these tools.
 
@@ -32,14 +34,16 @@ And since you will have created a node you can also help decentralize the networ
     + Use this [**tool**](tool.00.transaction.csv.html) to manual create these csv files.
     + develop your own automated conversion tool to this [transaction csv format](#transaction).
     + or [request](https://github.com/Codes4Fun/bitcoin-tax-tools/issues) for a conversion tool to be made.
+ - For all transactions, if there is no exchange rate given, it is assumed to be income (mined or otherwise), and a rate will applied.
 
 2) Generate input.csv and output.csv files with this [**tool**](tool.01.generateIO.insight.html).
+ - income.csv contains all transactions for acquired BTC that had no exchange rate (no cost basis). Basically mined or other income.
  - input.csv contains all transactions for acquired BTC.
  - output.csv contains all transactions of spent BTC.
 
 3) For a given year generate TXF and compute gains with this [**tool**](tool.02.report.html).
  - taxes.txf a document that can be imported into tax software.
- - taxes.txt a document showing your years income, cost, and gains.
+ - taxes.txt a document showing your years income, and long term and short term gains.
  - taxes.csv alternative format of TXF.
 
 4) Import TXF file into your tax software.
@@ -70,7 +74,7 @@ These files have no headers but each column consists of:
 where:
  - **timestamp** - is Unix time, seconds passed since January 1, 1970 UTC.
  - **BTC delta** - this is how much was gained or lost in BTC in the transaction.
- - **exchange rate** - this was the exchange rate at the time of exchange. If you sold 2 BTC for 400, this should be 200 (400/2). If you don't know the rate place double quotes "", and it will pull from the rates binary.
+ - **exchange rate** - this was the exchange rate at the time of exchange. If you sold 2 BTC for 400, this should be 200 (400/2). If you don't know the rate place double quotes "", and it will pull from the rates binary, but this also means it is included as income (mined or otherwise).
  - **transaction id** - this is the bitcoin transaction id, knowing this allows wallet to wallet transfers to not be counted as a sale/buy (though the fee will be counted).
  - **source** - this is just for debugging purposes, it lets you know where this transaction came from (a coinbase csv or a bitcoin address, etc).
 
